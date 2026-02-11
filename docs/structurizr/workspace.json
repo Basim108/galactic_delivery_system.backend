@@ -1,0 +1,119 @@
+{
+  "configuration" : {
+    "scope" : "SoftwareSystem"
+  },
+  "description" : "C4 model for The Great Galactic Delivery Race backend.",
+  "documentation" : { },
+  "id" : 1,
+  "lastModifiedAgent" : "structurizr-ui",
+  "lastModifiedDate" : "2026-02-11T22:52:00Z",
+  "model" : {
+    "people" : [ {
+      "description" : "Oversees deliveries and operational performance.",
+      "id" : "1",
+      "name" : "Operations Manager",
+      "properties" : {
+        "structurizr.dsl.identifier" : "operationsManager"
+      },
+      "relationships" : [ {
+        "description" : "Monitors operations, manages deliveries",
+        "destinationId" : "2",
+        "id" : "3",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    } ],
+    "softwareSystems" : [ {
+      "description" : "Backend system supporting the Great Galactic Delivery Race.",
+      "documentation" : { },
+      "id" : "2",
+      "name" : "Galactic Delivery System",
+      "properties" : {
+        "structurizr.dsl.identifier" : "galacticDeliverySystem"
+      },
+      "tags" : "Element,Software System,System"
+    } ]
+  },
+  "name" : "Galactic Delivery System",
+  "properties" : {
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.error" : "2",
+    "structurizr.inspection.warning" : "0"
+  },
+  "views" : {
+    "configuration" : {
+      "branding" : { },
+      "lastSavedView" : "SystemContext",
+      "metadataSymbols" : "SquareBrackets",
+      "styles" : {
+        "elements" : [ {
+          "background" : "#438dd5",
+          "color" : "#ffffff",
+          "tag" : "Container"
+        }, {
+          "background" : "#08427b",
+          "color" : "#ffffff",
+          "shape" : "Person",
+          "tag" : "Person"
+        }, {
+          "background" : "#1168bd",
+          "color" : "#ffffff",
+          "tag" : "Software System"
+        } ]
+      },
+      "terminology" : { }
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "Container view (to be refined as containers are introduced).",
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Containers",
+      "name" : "Container View: Galactic Delivery System",
+      "order" : 2,
+      "softwareSystemId" : "2"
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "System Context view.",
+      "dimensions" : {
+        "height" : 800,
+        "width" : 1550
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 200,
+        "y" : 142
+      }, {
+        "id" : "2",
+        "x" : 900,
+        "y" : 192
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "SystemContext",
+      "name" : "System Context View: Galactic Delivery System",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "3"
+      } ],
+      "softwareSystemId" : "2"
+    } ]
+  }
+}

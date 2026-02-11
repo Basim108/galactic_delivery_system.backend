@@ -1,0 +1,178 @@
+name: build-and-test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  CONFIGURATION: Release
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/Directory.Build.targets') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore SpaceTruckers.sln
+
+      - name: Build
+        run: dotnet build SpaceTruckers.sln -c ${{ env.CONFIGURATION }} --no-restore
+
+  lint:
+    name: Lint (dotnet format)
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Restore
+        run: dotnet restore SpaceTruckers.sln
+
+      - name: dotnet format (verify)
+        run: dotnet format SpaceTruckers.sln --verify-no-changes --no-restore
+
+  test:
+    name: Test (unit + integration)
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Restore
+        run: dotnet restore SpaceTruckers.sln
+
+      - name: Test with coverage
+        run: |
+          dotnet test SpaceTruckers.sln \
+            -c ${{ env.CONFIGURATION }} \
+            --no-restore \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Generate coverage report
+        run: |
+          dotnet reportgenerator \
+            -reports:"**/TestResults/**/coverage.opencover.xml" \
+            -targetdir:"./TestResults/coveragereport" \
+            -reporttypes:"HtmlInline;Cobertura"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: test-results
+          path: TestResults
+          retention-days: 14
+
+  quality:
+    name: Quality (SonarCloud)
+    runs-on: ubuntu-latest
+    needs: [ build, test ]
+    steps:
+      - name: Checkout (full history for Sonar)
+        uses: actions/checkout@v4.2.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Java (required by SonarScanner)
+        uses: actions/setup-java@v4.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: SonarCloud - Begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORG: ${{ secrets.SONAR_ORG }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${SONAR_PROJECT_KEY}" \
+            /o:"${SONAR_ORG}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+
+      - name: Build
+        run: dotnet build SpaceTruckers.sln -c ${{ env.CONFIGURATION }}
+
+      - name: Test (for Sonar)
+        run: |
+          dotnet test SpaceTruckers.sln \
+            -c ${{ env.CONFIGURATION }} \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: SonarCloud - End
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+  architecture-check:
+    name: Architecture Check (Structurizr DSL)
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.1
+
+      - name: Validate Structurizr workspace.dsl
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/docs/structurizr:/workspace" \
+            structurizr/cli:2025.11.09 validate -w /workspace/workspace.dsl
