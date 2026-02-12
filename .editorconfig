@@ -16,8 +16,22 @@ dotnet_sort_system_directives_first = true
 # Prefer file-scoped namespaces
 csharp_style_namespace_declarations = file_scoped:suggestion
 
+# 1. Use collection expressions [] instead of new List<T> or new T[]
+# Priority: Error (Strict enforcement)
+dotnet_style_prefer_collection_expression = true:error
+
+# Avoid "this." qualification unless absolutely necessary
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
 # Prefer implicit object creation when type is apparent
 csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+
+# 2. Use primary constructors
+# Priority: Warning (Suggest strongly, but allow manual constructors for complex init logic)
+csharp_style_prefer_primary_constructors = true:warning
 
 # Prefer pattern matching
 csharp_style_prefer_pattern_matching = true:suggestion
@@ -34,6 +48,28 @@ csharp_style_expression_bodied_properties = when_on_single_line:suggestion
 
 # Null checks
 dotnet_style_coalesce_expression = true:suggestion
+
+#### NAMING CONVENTIONS ####
+
+# Interfaces must start with 'I'
+dotnet_naming_rule.interface_should_be_begins_with_i.severity = suggestion
+dotnet_naming_rule.interface_should_be_begins_with_i.symbols = interface
+dotnet_naming_rule.interface_should_be_begins_with_i.style = i_prefix
+
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_style.i_prefix.capitalization = pascal_case
+dotnet_naming_style.i_prefix.required_prefix = I
+
+# Constants must be Upper_Snake_Case (e.g., DRIVER_EVENT)
+dotnet_naming_rule.constants_should_be_upper_snake_case.severity = warning
+dotnet_naming_rule.constants_should_be_upper_snake_case.symbols = constant_fields
+dotnet_naming_rule.constants_should_be_upper_snake_case.style = upper_snake_case_style
+
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+
+dotnet_naming_style.upper_snake_case_style.capitalization = all_upper
+dotnet_naming_style.upper_snake_case_style.word_separator = _
 
 [*.csproj]
 indent_style = space
