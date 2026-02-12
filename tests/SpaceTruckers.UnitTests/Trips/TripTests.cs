@@ -1,3 +1,4 @@
+using FluentAssertions;
 using SpaceTruckers.Domain.Common;
 using SpaceTruckers.Domain.Exceptions;
 using SpaceTruckers.Domain.Ids;
@@ -21,8 +22,8 @@ public sealed class TripTests
             CreateCheckpoints("Earth", "Mars"),
             now);
 
-        var created = Assert.Single(trip.RecordedEvents.OfType<TripCreated>());
-        Assert.Equal(trip.Id, created.TripId);
+        var created = trip.RecordedEvents.OfType<TripCreated>().Should().ContainSingle().Subject;
+        created.TripId.Should().Be(trip.Id);
     }
 
     [Fact]
@@ -33,9 +34,9 @@ public sealed class TripTests
 
         trip.Start(CargoCapacity.From(100), now);
 
-        Assert.Equal(TripStatus.Active, trip.Status);
-        Assert.Equal(1, trip.Version);
-        Assert.Single(trip.RecordedEvents.OfType<TripStarted>());
+        trip.Status.Should().Be(TripStatus.Active);
+        trip.Version.Should().Be(1);
+        trip.RecordedEvents.OfType<TripStarted>().Should().ContainSingle();
     }
 
     [Fact]
@@ -44,9 +45,11 @@ public sealed class TripTests
         var now = DateTimeOffset.UtcNow;
         var trip = CreateTrip(cargoRequirement: 250, now);
 
-        var ex = Assert.Throws<DomainRuleViolationException>(() => trip.Start(CargoCapacity.From(100), now));
-        Assert.Equal(DomainErrorCodes.INSUFFICIENT_CARGO_CAPACITY, ex.Code);
-        Assert.Equal(TripStatus.Planned, trip.Status);
+        var act = () => trip.Start(CargoCapacity.From(100), now);
+
+        act.Should().Throw<DomainRuleViolationException>()
+            .Which.Code.Should().Be(DomainErrorCodes.INSUFFICIENT_CARGO_CAPACITY);
+        trip.Status.Should().Be(TripStatus.Planned);
     }
 
     [Fact]
@@ -58,7 +61,7 @@ public sealed class TripTests
         trip.Start(CargoCapacity.From(100), now, requestId: "REQ-1");
         trip.Start(CargoCapacity.From(100), now, requestId: "REQ-1");
 
-        Assert.Single(trip.RecordedEvents.OfType<TripStarted>());
+        trip.RecordedEvents.OfType<TripStarted>().Should().ContainSingle();
     }
 
     [Fact]
@@ -71,7 +74,7 @@ public sealed class TripTests
         trip.ReachCheckpoint("Earth", now);
         trip.ReachCheckpoint("Luna Gate", now);
 
-        Assert.Equal("Luna Gate", trip.LastReachedCheckpointName);
+        trip.LastReachedCheckpointName.Should().Be("Luna Gate");
     }
 
     [Fact]
@@ -83,8 +86,10 @@ public sealed class TripTests
         trip.Start(CargoCapacity.From(100), now);
         trip.ReachCheckpoint("Earth", now);
 
-        var ex = Assert.Throws<DomainRuleViolationException>(() => trip.ReachCheckpoint("Mars Station", now));
-        Assert.Equal(DomainErrorCodes.CHECKPOINT_OUT_OF_ORDER, ex.Code);
+        var act = () => trip.ReachCheckpoint("Mars Station", now);
+
+        act.Should().Throw<DomainRuleViolationException>()
+            .Which.Code.Should().Be(DomainErrorCodes.CHECKPOINT_OUT_OF_ORDER);
     }
 
     [Fact]
@@ -96,8 +101,10 @@ public sealed class TripTests
         trip.Start(CargoCapacity.From(100), now);
         trip.ReachCheckpoint("Earth", now);
 
-        var ex = Assert.Throws<DomainRuleViolationException>(() => trip.Complete(now));
-        Assert.Equal(DomainErrorCodes.TRIP_NOT_AT_DESTINATION, ex.Code);
+        var act = () => trip.Complete(now);
+
+        act.Should().Throw<DomainRuleViolationException>()
+            .Which.Code.Should().Be(DomainErrorCodes.TRIP_NOT_AT_DESTINATION);
     }
 
     [Fact]
@@ -113,8 +120,8 @@ public sealed class TripTests
 
         trip.Complete(now);
 
-        Assert.Equal(TripStatus.Completed, trip.Status);
-        Assert.Single(trip.RecordedEvents.OfType<TripCompleted>());
+        trip.Status.Should().Be(TripStatus.Completed);
+        trip.RecordedEvents.OfType<TripCompleted>().Should().ContainSingle();
     }
 
     [Fact]
@@ -126,8 +133,8 @@ public sealed class TripTests
         trip.Start(CargoCapacity.From(100), now);
         trip.ReportIncident(new Incident("CosmicStorm", IncidentSeverity.Catastrophic, null), now);
 
-        Assert.Equal(TripStatus.Aborted, trip.Status);
-        Assert.Single(trip.RecordedEvents.OfType<TripAborted>());
+        trip.Status.Should().Be(TripStatus.Aborted);
+        trip.RecordedEvents.OfType<TripAborted>().Should().ContainSingle();
     }
 
     [Fact]
@@ -141,10 +148,10 @@ public sealed class TripTests
         trip.ReachCheckpoint("Mars", now);
         trip.Complete(now);
 
-        var ex = Assert.Throws<DomainRuleViolationException>(() =>
-            trip.ReportIncident(new Incident("AsteroidField", IncidentSeverity.Catastrophic, null), now));
+        var act = () => trip.ReportIncident(new Incident("AsteroidField", IncidentSeverity.Catastrophic, null), now);
 
-        Assert.Equal(DomainErrorCodes.TRIP_ALREADY_COMPLETED, ex.Code);
+        act.Should().Throw<DomainRuleViolationException>()
+            .Which.Code.Should().Be(DomainErrorCodes.TRIP_ALREADY_COMPLETED);
     }
 
     private static Trip CreateTrip(int cargoRequirement, DateTimeOffset now, params string[] checkpoints) =>

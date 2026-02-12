@@ -1,3 +1,5 @@
+using FluentAssertions;
+using NSubstitute;
 using SpaceTruckers.Application.Abstractions;
 using SpaceTruckers.Application.Trips.Commands;
 using SpaceTruckers.Domain.Common;
@@ -20,8 +22,10 @@ public sealed class CreateTripHandlerTests
         var tripRepo = new InMemoryTripRepository();
         var booking = new InMemoryResourceBookingService();
 
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
-        var publisher = new NoOpDomainEventPublisher();
+        var clock = Substitute.For<IClock>();
+        clock.UtcNow.Returns(DateTimeOffset.UtcNow);
+
+        var publisher = Substitute.For<IDomainEventPublisher>();
 
         var driverId = DriverId.New();
         var vehicleId = VehicleId.New();
@@ -33,20 +37,11 @@ public sealed class CreateTripHandlerTests
 
         var handler = new CreateTripHandler(tripRepo, driverRepo, vehicleRepo, routeRepo, booking, clock, publisher);
 
-        var ex = await Assert.ThrowsAsync<DomainRuleViolationException>(() =>
-            handler.Handle(new CreateTripCommand(TripId.New(), driverId, vehicleId, routeId, CargoRequirement: 0), CancellationToken.None));
+        var act = async () => await handler.Handle(
+            new CreateTripCommand(TripId.New(), driverId, vehicleId, routeId, CargoRequirement: 0),
+            CancellationToken.None);
 
-        Assert.Equal(DomainErrorCodes.DRIVER_UNAVAILABLE, ex.Code);
-    }
-
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
-
-    private sealed class NoOpDomainEventPublisher : IDomainEventPublisher
-    {
-        public Task PublishAsync(IReadOnlyCollection<SpaceTruckers.Domain.Common.IDomainEvent> domainEvents, CancellationToken cancellationToken) =>
-            Task.CompletedTask;
+        await act.Should().ThrowAsync<DomainRuleViolationException>()
+            .Where(ex => ex.Code == DomainErrorCodes.DRIVER_UNAVAILABLE);
     }
 }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using FluentAssertions;
 using SpaceTruckers.Api.Contracts;
 using SpaceTruckers.Domain.Common;
 using SpaceTruckers.Domain.Resources;
@@ -24,10 +25,10 @@ public sealed class TripEdgeCasesApiTests
 
         var response = await http.PostAsJsonAsync($"/api/trips/{trip.TripId}/start", new StartTripRequest(RequestId: null));
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>();
-        Assert.NotNull(problem);
-        Assert.Equal(DomainErrorCodes.INSUFFICIENT_CARGO_CAPACITY, problem.Code);
+        problem.Should().NotBeNull();
+        problem!.Code.Should().Be(DomainErrorCodes.INSUFFICIENT_CARGO_CAPACITY);
     }
 
     [Fact]
@@ -50,10 +51,10 @@ public sealed class TripEdgeCasesApiTests
             $"/api/trips/{trip.TripId}/incidents",
             new ReportIncidentRequest("AsteroidField", IncidentSeverity.Catastrophic, null));
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>();
-        Assert.NotNull(problem);
-        Assert.Equal(DomainErrorCodes.TRIP_ALREADY_COMPLETED, problem.Code);
+        problem.Should().NotBeNull();
+        problem!.Code.Should().Be(DomainErrorCodes.TRIP_ALREADY_COMPLETED);
     }
 
     [Fact]
@@ -71,13 +72,13 @@ public sealed class TripEdgeCasesApiTests
         await client.StartTripAsync(trip.TripId);
 
         var aborted = await client.ReportIncidentAsync(trip.TripId, "CosmicStorm", IncidentSeverity.Catastrophic);
-        Assert.Equal(TripStatus.Aborted, aborted.Status);
+        aborted.Status.Should().Be(TripStatus.Aborted);
 
         var response = await http.PostAsync($"/api/trips/{trip.TripId}/complete", content: null);
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>();
-        Assert.NotNull(problem);
-        Assert.Equal(DomainErrorCodes.TRIP_NOT_COMPLETABLE, problem.Code);
+        problem.Should().NotBeNull();
+        problem!.Code.Should().Be(DomainErrorCodes.TRIP_NOT_COMPLETABLE);
     }
 }

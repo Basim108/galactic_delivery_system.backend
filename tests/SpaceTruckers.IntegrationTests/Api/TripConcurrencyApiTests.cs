@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using FluentAssertions;
 using SpaceTruckers.Api.Contracts;
 using SpaceTruckers.Domain.Resources;
 
@@ -30,13 +31,13 @@ public sealed class TripConcurrencyApiTests
         var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
         var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
 
-        Assert.Equal(1, successCount);
-        Assert.Equal(1, conflictCount);
+        successCount.Should().Be(1);
+        conflictCount.Should().Be(1);
 
         var conflict = responses.Single(r => r.StatusCode == HttpStatusCode.Conflict);
         var problem = await conflict.Content.ReadFromJsonAsync<ProblemResponse>();
-        Assert.NotNull(problem);
-        Assert.Equal("OptimisticConcurrencyException", problem.Code);
+        problem.Should().NotBeNull();
+        problem!.Code.Should().Be("OptimisticConcurrencyException");
     }
 
     [Fact]
@@ -63,12 +64,12 @@ public sealed class TripConcurrencyApiTests
         var okCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
         var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
 
-        Assert.Equal(1, okCount);
-        Assert.Equal(1, conflictCount);
+        okCount.Should().Be(1);
+        conflictCount.Should().Be(1);
 
         var conflict = responses.Single(r => r.StatusCode == HttpStatusCode.Conflict);
         var problem = await conflict.Content.ReadFromJsonAsync<ProblemResponse>();
-        Assert.NotNull(problem);
-        Assert.Equal("OptimisticConcurrencyException", problem.Code);
+        problem.Should().NotBeNull();
+        problem!.Code.Should().Be("OptimisticConcurrencyException");
     }
 }

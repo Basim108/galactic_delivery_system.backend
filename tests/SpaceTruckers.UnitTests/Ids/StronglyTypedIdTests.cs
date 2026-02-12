@@ -1,3 +1,4 @@
+using FluentAssertions;
 using SpaceTruckers.Domain.Ids;
 
 namespace SpaceTruckers.UnitTests.Ids;
@@ -9,21 +10,23 @@ public sealed class StronglyTypedIdTests
     {
         var id = TripId.New();
         var parsed = TripId.Parse(id.ToString());
-        Assert.Equal(id, parsed);
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void TripId_TryParse_ValidGuid_ReturnsTrue()
     {
         var id = TripId.New();
-        Assert.True(TripId.TryParse(id.ToString(), out var parsed));
-        Assert.Equal(id, parsed);
+        var result = TripId.TryParse(id.ToString(), out var parsed);
+        result.Should().BeTrue();
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void TripId_TryParse_InvalidGuid_ReturnsFalse()
     {
-        Assert.False(TripId.TryParse("not-a-guid", out _));
+        var result = TripId.TryParse("not-a-guid", out _);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -31,13 +34,14 @@ public sealed class StronglyTypedIdTests
     {
         var id = DriverId.New();
         var parsed = DriverId.Parse(id.ToString());
-        Assert.Equal(id, parsed);
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void DriverId_TryParse_InvalidGuid_ReturnsFalse()
     {
-        Assert.False(DriverId.TryParse("not-a-guid", out _));
+        var result = DriverId.TryParse("not-a-guid", out _);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -45,13 +49,14 @@ public sealed class StronglyTypedIdTests
     {
         var id = VehicleId.New();
         var parsed = VehicleId.Parse(id.ToString());
-        Assert.Equal(id, parsed);
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void VehicleId_TryParse_InvalidGuid_ReturnsFalse()
     {
-        Assert.False(VehicleId.TryParse("not-a-guid", out _));
+        var result = VehicleId.TryParse("not-a-guid", out _);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -59,13 +64,14 @@ public sealed class StronglyTypedIdTests
     {
         var id = RouteId.New();
         var parsed = RouteId.Parse(id.ToString());
-        Assert.Equal(id, parsed);
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void RouteId_TryParse_InvalidGuid_ReturnsFalse()
     {
-        Assert.False(RouteId.TryParse("not-a-guid", out _));
+        var result = RouteId.TryParse("not-a-guid", out _);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -73,20 +79,22 @@ public sealed class StronglyTypedIdTests
     {
         var id = CheckpointId.New();
         var parsed = CheckpointId.Parse(id.ToString());
-        Assert.Equal(id, parsed);
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void CheckpointId_TryParse_ValidGuid_ReturnsTrue()
     {
         var id = CheckpointId.New();
-        Assert.True(CheckpointId.TryParse(id.ToString(), out var parsed));
-        Assert.Equal(id, parsed);
+        var result = CheckpointId.TryParse(id.ToString(), out var parsed);
+        result.Should().BeTrue();
+        parsed.Should().Be(id);
     }
 
     [Fact]
     public void CheckpointId_TryParse_InvalidGuid_ReturnsFalse()
     {
-        Assert.False(CheckpointId.TryParse("not-a-guid", out _));
+        var result = CheckpointId.TryParse("not-a-guid", out _);
+        result.Should().BeFalse();
     }
 }

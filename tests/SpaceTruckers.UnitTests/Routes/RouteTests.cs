@@ -1,3 +1,4 @@
+using FluentAssertions;
 using SpaceTruckers.Domain.Ids;
 using SpaceTruckers.Domain.Routes;
 
@@ -8,7 +9,8 @@ public sealed class RouteTests
     [Fact]
     public void Create_WithNoCheckpoints_Throws()
     {
-        Assert.Throws<ArgumentException>(() => Route.Create(RouteId.New(), "R", Array.Empty<string>()));
+        var act = () => Route.Create(RouteId.New(), "R", Array.Empty<string>());
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -16,9 +18,9 @@ public sealed class RouteTests
     {
         var route = Route.Create(RouteId.New(), "R", ["  Earth  ", "Mars Station"]);
 
-        Assert.Equal(2, route.Checkpoints.Count);
-        Assert.Equal(1, route.Checkpoints[0].Sequence);
-        Assert.Equal("Earth", route.Checkpoints[0].Name);
-        Assert.Equal(2, route.Checkpoints[1].Sequence);
+        route.Checkpoints.Should().HaveCount(2);
+        route.Checkpoints[0].Sequence.Should().Be(1);
+        route.Checkpoints[0].Name.Should().Be("Earth");
+        route.Checkpoints[1].Sequence.Should().Be(2);
     }
 }
