@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SpaceTruckers.Domain\SpaceTruckers.Domain.csproj" />
     <ProjectReference Include="..\..\src\SpaceTruckers.Application\SpaceTruckers.Application.csproj" />
+    <ProjectReference Include="..\..\src\SpaceTruckers.Infrastructure\SpaceTruckers.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

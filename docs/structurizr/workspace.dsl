@@ -7,6 +7,22 @@ workspace "Galactic Delivery System" "C4 model for The Great Galactic Delivery R
 
     galacticDeliverySystem = softwareSystem "Galactic Delivery System" "Backend system supporting the Great Galactic Delivery Race." {
       tags "System"
+
+      api = container "SpaceTruckers API" "ASP.NET Core Minimal API (SpaceTruckers.Api)." "C#/.NET" {
+        tags "Container"
+      }
+
+      application = container "Application Layer" "CQRS command/query handlers using MediatR (SpaceTruckers.Application)." "C#/.NET" {
+        tags "Container"
+
+        tripCommandHandlers = component "TripCommandHandlers" "MediatR IRequestHandlers for Trip commands." "C#"
+        tripRepository = component "ITripRepository" "Trip persistence port (InMemory now, EF Core later)." "C#"
+        domainEventPublisher = component "IDomainEventPublisher" "Publishes domain events (in-process now, persistent broker later)." "C#"
+      }
+
+      infrastructure = container "Infrastructure" "In-memory persistence and event dispatch adapters (SpaceTruckers.Infrastructure)." "C#/.NET" {
+        tags "Container"
+      }
     }
 
     // Core Domain (conceptual model)
@@ -14,7 +30,7 @@ workspace "Galactic Delivery System" "C4 model for The Great Galactic Delivery R
       tags "CoreDomain"
     }
 
-    trip = element "Trip" "A delivery execution of a route by a specific driver and vehicle." {
+    trip = element "Trip" "Aggregate root: tracks lifecycle and events; optimistic concurrency via Version." {
       tags "CoreDomain"
     }
 
@@ -38,9 +54,21 @@ workspace "Galactic Delivery System" "C4 model for The Great Galactic Delivery R
       tags "CoreDomain"
     }
 
-    dispatcher -> galacticDeliverySystem "Creates and starts trips"
-    operationsManager -> galacticDeliverySystem "Monitors trip progress and reviews summaries"
+    // System interactions
+    dispatcher -> api "Creates and starts trips" "HTTPS"
+    operationsManager -> api "Monitors trip progress and reviews summaries" "HTTPS"
 
+    api -> application "Sends commands/queries" "MediatR"
+    api -> tripCommandHandlers "Dispatches commands" "MediatR"
+
+    tripCommandHandlers -> tripRepository "Load/Save Trips" "ITripRepository"
+    tripRepository -> trip "Loads/Saves" "InMemory"
+    tripCommandHandlers -> trip "Executes domain logic" "In-process"
+    tripCommandHandlers -> domainEventPublisher "Publishes" "IDomainEventPublisher"
+
+    application -> infrastructure "Uses" "InMemory repositories"
+
+    // Conceptual domain relationships
     galacticDeliverySystem -> galacticRace "Runs"
 
     galacticRace -> trip "Includes" "1..*"
@@ -59,9 +87,34 @@ workspace "Galactic Delivery System" "C4 model for The Great Galactic Delivery R
       autolayout lr
     }
 
-    container galacticDeliverySystem "Containers" "Container view (to be refined as containers are introduced)." {
-      include *
+    container galacticDeliverySystem "Containers" "Container view." {
+      include dispatcher
+      include operationsManager
+      include api
+      include application
+      include infrastructure
       autolayout lr
+    }
+
+    component application "TripComponents" "How Trip command handlers use repository and event publishing ports." {
+      include api
+      include trip
+
+      include tripCommandHandlers
+      include tripRepository
+      include domainEventPublisher
+
+      autolayout lr
+    }
+
+    dynamic application "StartTripFlow" "Dynamic view - Start Trip command." {
+      dispatcher -> api "POST /api/trips/{id}/start"
+      api -> tripCommandHandlers "StartTripCommand"
+      tripCommandHandlers -> tripRepository "GetAsync(TripId)"
+      tripRepository -> trip "Load Trip"
+      tripCommandHandlers -> trip "Start()"
+      tripCommandHandlers -> tripRepository "UpdateAsync(trip, expectedVersion)"
+      tripCommandHandlers -> domainEventPublisher "Publish(domainEvents)"
     }
 
     custom "DomainModel" "Core domain conceptual model." {
@@ -89,6 +142,11 @@ workspace "Galactic Delivery System" "C4 model for The Great Galactic Delivery R
 
       element "Container" {
         background #438dd5
+        color #ffffff
+      }
+
+      element "CoreDomain" {
+        background #2d6a4f
         color #ffffff
       }
     }

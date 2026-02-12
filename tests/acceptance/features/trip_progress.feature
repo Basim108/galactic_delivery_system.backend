@@ -22,6 +22,10 @@ Feature: Trip progress and completion summary
     Then the system should record the Trip Event "CheckpointReached" for Trip "T-200"
     And Trip "T-200" should have last reached Checkpoint "Luna Gate"
 
+    When the system records that Trip "T-200" reached Checkpoint "Mars Station"
+    Then the system should record the Trip Event "CheckpointReached" for Trip "T-200"
+    And Trip "T-200" should have last reached Checkpoint "Mars Station"
+
     When the Dispatcher completes Trip "T-200"
     Then Trip "T-200" should be in status "Completed"
     And the system should record the Trip Event "TripCompleted" for Trip "T-200"
