@@ -3,35 +3,331 @@
     "scope" : "SoftwareSystem"
   },
   "description" : "C4 model for The Great Galactic Delivery Race backend.",
-  "documentation" : { },
+  "documentation" : {
+    "decisions" : [ {
+      "content" : "## Status\nAccepted\n\n## Context\nWe are building the SpaceTruckers backend for \"The Great Galactic Delivery Race\".\nThe domain contains long-lived business concepts (Trip, Driver, Vehicle, Route, Incident) and must remain maintainable as requirements evolve.\n\nWe want to:\n- Keep the Domain model independent from frameworks and infrastructure concerns.\n- Make business rules testable with fast unit tests.\n- Enable swapping infrastructure implementations (e.g., in-memory now, EF Core later).\n- Avoid coupling application use-cases to transport (HTTP) or persistence.\n\n## Decision\nWe will adopt **Clean Architecture (Onion Architecture)** with the following boundaries:\n- **Domain** (`SpaceTruckers.Domain`): aggregates, value objects, domain events, invariants.\n- **Application** (`SpaceTruckers.Application`): CQRS commands/queries and handlers, ports (interfaces) for persistence and event publishing.\n- **Infrastructure** (`SpaceTruckers.Infrastructure`): adapters implementing Application ports (in-memory persistence, in-process event publisher).\n- **API** (`SpaceTruckers.Api`): HTTP transport and composition root (DI wiring, validation, endpoint mapping).\n\nDependencies must point inward:\n- API -> Application -> Domain\n- Infrastructure -> Application + Domain\n\n## Consequences\n### Positive\n- High testability: domain and handlers can be tested without HTTP or storage.\n- Long-term maintainability: changes to infrastructure or transport do not require refactoring core business logic.\n- Clear separation of concerns aligned with DDD boundaries.\n\n### Negative\n- More projects and abstractions compared to a single-layer API.\n- Requires discipline to prevent boundary violations (e.g., infrastructure leaking into domain).\n\n## Notes\nThis approach is preferred over \"everything in the API project\" because it creates explicit seams for:\n- Concurrency policies\n- Domain event dispatch\n- Swapping persistence strategies\n",
+      "date" : "2026-02-13T00:28:40Z",
+      "format" : "Markdown",
+      "id" : "1",
+      "status" : "Accepted",
+      "title" : "# Status"
+    }, {
+      "content" : "## Status\nAccepted\n\n## Context\nThe SpaceTruckers domain is eventful: trips start, checkpoints are reached, incidents occur, trips complete or abort.\nOperations requires reliable visibility and the system should be extendable (notifications, metrics, workflows).\n\nWe need a mechanism to:\n- Capture domain-significant changes as **Domain Events** in the Domain layer.\n- Dispatch those events after successful persistence.\n- Keep the Domain model pure (no dependency on MediatR or messaging libraries).\n- Allow future migration to persistent message brokers (Kafka, AWS SQS, etc.).\n\n## Decision\n- Domain events are represented as plain C# records in `SpaceTruckers.Domain` (no framework interfaces).\n- The Application layer defines a port: `IDomainEventPublisher`.\n- The Infrastructure layer provides an in-process implementation: `InProcessDomainEventPublisher`, using **MediatR** to publish `DomainEventNotification`.\n\n## Why MediatR (now)\n- Simple in-process pub/sub with DI integration.\n- Encourages small, decoupled handlers (notifications can be added without changing aggregates).\n- Keeps commands/queries (CQRS) and notifications in one mental model.\n\n## Why not .NET Channels (for this requirement)\nChannels are a great low-level primitive, but:\n- They require us to design message routing, subscription, and handler lifetimes ourselves.\n- They do not provide a natural separation between command handling vs domain event handling out-of-the-box.\n- They are not a drop-in integration point for external brokers.\n\n## How this enables external brokers later\nBecause Application depends on `IDomainEventPublisher` (an interface), we can replace the infrastructure implementation with:\n- An outbox + broker publisher (Kafka/SQS/etc.)\n- A durable event store\n- A hybrid approach (in-process for local concerns, broker for cross-service concerns)\n\nThe Domain layer remains unchanged.\n\n## Consequences\n- Domain events are first-class and testable.\n- Event dispatch is pluggable.\n- In-process dispatch does not guarantee durability; durability will be added with a broker/outbox when needed.\n",
+      "date" : "2026-02-13T00:28:40Z",
+      "format" : "Markdown",
+      "id" : "2",
+      "status" : "Accepted",
+      "title" : "# Status"
+    }, {
+      "content" : "## Status\nAccepted\n\n## Context\nWe need a runnable system immediately to validate the domain model, CQRS handlers, concurrency rules, and acceptance criteria.\nWe also want the design to allow later adoption of a real database (e.g., Postgres via EF Core).\n\nConstraints:\n- Avoid premature infrastructure complexity.\n- Keep the Domain pure.\n- Keep the Application layer test-friendly.\n\n## Decision\n- The Application layer defines repository ports:\n  - `ITripRepository`, `IDriverRepository`, `IVehicleRepository`, `IRouteRepository`\n  - plus `IResourceBookingService` for double-booking prevention\n- The Infrastructure layer provides thread-safe in-memory implementations using `ConcurrentDictionary`.\n\n## Why in-memory now\n- Fast feedback loop: domain rules can be exercised without provisioning a database.\n- Deterministic tests: integration tests run quickly and locally.\n- Focus on correctness of invariants, event ordering, and optimistic concurrency semantics.\n\n## Why not EF Core yet\n- Requires schema design, migrations, and database lifecycle management.\n- Adds complexity unrelated to validating core domain rules.\n\n## How we will switch to EF Core later\nBecause persistence is behind interfaces in the Application layer:\n- Create an EF Core DbContext and repository implementations in Infrastructure.\n- Preserve the same port contracts; application handlers do not change.\n- Add transactional consistency and database-backed concurrency tokens.\n\n## Consequences\n- In-memory storage is not durable and resets on restart.\n- Scalability is limited to a single process.\n- This is acceptable for early development and specification validation.\n",
+      "date" : "2026-02-13T00:28:40Z",
+      "format" : "Markdown",
+      "id" : "3",
+      "status" : "Accepted",
+      "title" : "# Status"
+    }, {
+      "content" : "## Status\nAccepted\n\n## Context\nThe system must support multiple trips at the same time.\nWe must prevent:\n- Double-booking Drivers or Vehicles across concurrent trips.\n- Lost updates when multiple requests act on the same Trip (start/checkpoint/incident/complete).\n\nWe also need a strategy that works well with:\n- Event-driven processing\n- Potential future database persistence\n- Horizontal scaling (multiple API instances)\n\n## Decision\nWe will use **Optimistic Concurrency Control**.\n\n- `Trip` uses a `Version` property that increments on each accepted state transition.\n- Persistence updates require \"expected version\" matching the stored version.\n- Resource booking (Driver/Vehicle reservations) also uses optimistic conflict detection to avoid double-booking.\n\n## Why optimistic concurrency fits this domain\n- Conflicts are expected to be relatively rare in normal operations.\n- It avoids holding locks across network calls and long-running trip lifecycles.\n- It maps directly to common persistence mechanisms (rowversion/ETag in SQL, document version in NoSQL).\n- It works naturally with retry semantics and idempotency keys.\n\n## Why not pessimistic locking\nPessimistic locking would require holding locks while a Trip is active (minutes/hours) or holding locks across distributed calls.\nThis causes:\n- Reduced throughput under load.\n- Higher risk of deadlocks/timeouts.\n- Operational complexity when scaling out.\n\n## Consequences\n- Callers must handle conflicts (HTTP 409 / OptimisticConcurrencyException) and retry if appropriate.\n- Implementation must ensure idempotency for retried commands (e.g., StartTrip).\n- Future EF Core implementation will use concurrency tokens (e.g., rowversion) to preserve the same behavior.\n",
+      "date" : "2026-02-13T00:28:40Z",
+      "format" : "Markdown",
+      "id" : "4",
+      "status" : "Accepted",
+      "title" : "# Status"
+    } ]
+  },
   "id" : 1,
   "lastModifiedAgent" : "structurizr-ui",
-  "lastModifiedDate" : "2026-02-11T22:52:00Z",
+  "lastModifiedDate" : "2026-02-13T00:29:25Z",
   "model" : {
+    "customElements" : [ {
+      "id" : "10",
+      "metadata" : "The Great Galactic Delivery Race operational context (multiple concurrent trips).",
+      "name" : "GalacticRace",
+      "properties" : {
+        "structurizr.dsl.identifier" : "galacticRace"
+      },
+      "relationships" : [ {
+        "description" : "Includes",
+        "destinationId" : "11",
+        "id" : "31",
+        "sourceId" : "10",
+        "tags" : "Relationship",
+        "technology" : "1..*"
+      } ],
+      "tags" : "Element,CoreDomain"
+    }, {
+      "id" : "11",
+      "metadata" : "Aggregate root: tracks lifecycle and events; optimistic concurrency via Version.",
+      "name" : "Trip",
+      "properties" : {
+        "structurizr.dsl.identifier" : "trip"
+      },
+      "relationships" : [ {
+        "description" : "Assigns",
+        "destinationId" : "12",
+        "id" : "32",
+        "sourceId" : "11",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Assigns",
+        "destinationId" : "13",
+        "id" : "33",
+        "sourceId" : "11",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Follows",
+        "destinationId" : "14",
+        "id" : "34",
+        "sourceId" : "11",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Records",
+        "destinationId" : "16",
+        "id" : "36",
+        "sourceId" : "11",
+        "tags" : "Relationship",
+        "technology" : "0..*"
+      } ],
+      "tags" : "Element,CoreDomain"
+    }, {
+      "id" : "12",
+      "metadata" : "A qualified pilot/operator assigned to trips.",
+      "name" : "Driver",
+      "properties" : {
+        "structurizr.dsl.identifier" : "driver"
+      },
+      "tags" : "Element,CoreDomain"
+    }, {
+      "id" : "13",
+      "metadata" : "A craft with cargo capacity used to transport cargo.",
+      "name" : "Vehicle",
+      "properties" : {
+        "structurizr.dsl.identifier" : "vehicle"
+      },
+      "tags" : "Element,CoreDomain"
+    }, {
+      "id" : "14",
+      "metadata" : "An ordered set of checkpoints from origin to destination.",
+      "name" : "Route",
+      "properties" : {
+        "structurizr.dsl.identifier" : "route"
+      },
+      "relationships" : [ {
+        "description" : "Defines (ordered)",
+        "destinationId" : "15",
+        "id" : "35",
+        "sourceId" : "14",
+        "tags" : "Relationship",
+        "technology" : "1..*"
+      } ],
+      "tags" : "Element,CoreDomain"
+    }, {
+      "id" : "15",
+      "metadata" : "An ordered waypoint on a route.",
+      "name" : "Checkpoint",
+      "properties" : {
+        "structurizr.dsl.identifier" : "checkpoint"
+      },
+      "tags" : "Element,CoreDomain"
+    }, {
+      "id" : "16",
+      "metadata" : "An unexpected event during a trip (may be catastrophic).",
+      "name" : "Incident",
+      "properties" : {
+        "structurizr.dsl.identifier" : "incident"
+      },
+      "tags" : "Element,CoreDomain"
+    } ],
     "people" : [ {
-      "description" : "Oversees deliveries and operational performance.",
+      "description" : "Schedules trips by assigning drivers, vehicles, and routes.",
       "id" : "1",
+      "name" : "Dispatcher",
+      "properties" : {
+        "structurizr.dsl.identifier" : "dispatcher"
+      },
+      "relationships" : [ {
+        "description" : "Creates and starts trips",
+        "destinationId" : "4",
+        "id" : "17",
+        "sourceId" : "1",
+        "tags" : "Relationship",
+        "technology" : "HTTPS"
+      }, {
+        "description" : "Creates and starts trips",
+        "destinationId" : "3",
+        "id" : "18",
+        "linkedRelationshipId" : "17",
+        "sourceId" : "1",
+        "technology" : "HTTPS"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "Oversees deliveries and operational performance.",
+      "id" : "2",
       "name" : "Operations Manager",
       "properties" : {
         "structurizr.dsl.identifier" : "operationsManager"
       },
       "relationships" : [ {
-        "description" : "Monitors operations, manages deliveries",
-        "destinationId" : "2",
-        "id" : "3",
-        "sourceId" : "1",
-        "tags" : "Relationship"
+        "description" : "Monitors trip progress and reviews summaries",
+        "destinationId" : "4",
+        "id" : "19",
+        "sourceId" : "2",
+        "tags" : "Relationship",
+        "technology" : "HTTPS"
+      }, {
+        "description" : "Monitors trip progress and reviews summaries",
+        "destinationId" : "3",
+        "id" : "20",
+        "linkedRelationshipId" : "19",
+        "sourceId" : "2",
+        "technology" : "HTTPS"
       } ],
       "tags" : "Element,Person"
     } ],
     "softwareSystems" : [ {
+      "containers" : [ {
+        "description" : "ASP.NET Core Minimal API (SpaceTruckers.Api).",
+        "documentation" : { },
+        "id" : "4",
+        "name" : "SpaceTruckers API",
+        "properties" : {
+          "structurizr.dsl.identifier" : "api"
+        },
+        "relationships" : [ {
+          "description" : "Sends commands/queries",
+          "destinationId" : "5",
+          "id" : "21",
+          "sourceId" : "4",
+          "tags" : "Relationship",
+          "technology" : "MediatR"
+        }, {
+          "description" : "Dispatches commands",
+          "destinationId" : "6",
+          "id" : "22",
+          "sourceId" : "4",
+          "tags" : "Relationship",
+          "technology" : "MediatR"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "C#/.NET"
+      }, {
+        "components" : [ {
+          "description" : "MediatR IRequestHandlers for Trip commands.",
+          "documentation" : { },
+          "id" : "6",
+          "name" : "TripCommandHandlers",
+          "properties" : {
+            "structurizr.dsl.identifier" : "tripCommandHandlers"
+          },
+          "relationships" : [ {
+            "description" : "Load/Save Trips",
+            "destinationId" : "7",
+            "id" : "23",
+            "sourceId" : "6",
+            "tags" : "Relationship",
+            "technology" : "ITripRepository"
+          }, {
+            "description" : "Executes domain logic",
+            "destinationId" : "11",
+            "id" : "27",
+            "sourceId" : "6",
+            "tags" : "Relationship",
+            "technology" : "In-process"
+          }, {
+            "description" : "Publishes",
+            "destinationId" : "8",
+            "id" : "28",
+            "sourceId" : "6",
+            "tags" : "Relationship",
+            "technology" : "IDomainEventPublisher"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "C#"
+        }, {
+          "description" : "Trip persistence port (InMemory now, EF Core later).",
+          "documentation" : { },
+          "id" : "7",
+          "name" : "ITripRepository",
+          "properties" : {
+            "structurizr.dsl.identifier" : "tripRepository"
+          },
+          "relationships" : [ {
+            "description" : "Loads/Saves",
+            "destinationId" : "11",
+            "id" : "24",
+            "sourceId" : "7",
+            "tags" : "Relationship",
+            "technology" : "InMemory"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "C#"
+        }, {
+          "description" : "Publishes domain events (in-process now, persistent broker later).",
+          "documentation" : { },
+          "id" : "8",
+          "name" : "IDomainEventPublisher",
+          "properties" : {
+            "structurizr.dsl.identifier" : "domainEventPublisher"
+          },
+          "tags" : "Element,Component",
+          "technology" : "C#"
+        } ],
+        "description" : "CQRS command/query handlers using MediatR (SpaceTruckers.Application).",
+        "documentation" : { },
+        "id" : "5",
+        "name" : "Application Layer",
+        "properties" : {
+          "structurizr.dsl.identifier" : "application"
+        },
+        "relationships" : [ {
+          "description" : "Loads/Saves",
+          "destinationId" : "11",
+          "id" : "25",
+          "linkedRelationshipId" : "24",
+          "sourceId" : "5",
+          "technology" : "InMemory"
+        }, {
+          "description" : "Uses",
+          "destinationId" : "9",
+          "id" : "29",
+          "sourceId" : "5",
+          "tags" : "Relationship",
+          "technology" : "InMemory repositories"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "C#/.NET"
+      }, {
+        "description" : "In-memory persistence and event dispatch adapters (SpaceTruckers.Infrastructure).",
+        "documentation" : { },
+        "id" : "9",
+        "name" : "Infrastructure",
+        "properties" : {
+          "structurizr.dsl.identifier" : "infrastructure"
+        },
+        "tags" : "Element,Container",
+        "technology" : "C#/.NET"
+      } ],
       "description" : "Backend system supporting the Great Galactic Delivery Race.",
       "documentation" : { },
-      "id" : "2",
+      "id" : "3",
       "name" : "Galactic Delivery System",
       "properties" : {
         "structurizr.dsl.identifier" : "galacticDeliverySystem"
       },
+      "relationships" : [ {
+        "description" : "Loads/Saves",
+        "destinationId" : "11",
+        "id" : "26",
+        "linkedRelationshipId" : "24",
+        "sourceId" : "3",
+        "technology" : "InMemory"
+      }, {
+        "description" : "Runs",
+        "destinationId" : "10",
+        "id" : "30",
+        "sourceId" : "3",
+        "tags" : "Relationship"
+      } ],
       "tags" : "Element,Software System,System"
     } ]
   },
@@ -39,19 +335,80 @@
   "properties" : {
     "structurizr.inspection.info" : "0",
     "structurizr.inspection.ignore" : "0",
-    "structurizr.inspection.error" : "2",
+    "structurizr.inspection.error" : "6",
     "structurizr.inspection.warning" : "0"
   },
   "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "5",
+      "description" : "How Trip command handlers use repository and event publishing ports.",
+      "dimensions" : {
+        "height" : 1644,
+        "width" : 3120
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 220,
+        "y" : 783
+      }, {
+        "id" : "6",
+        "x" : 970,
+        "y" : 783
+      }, {
+        "id" : "7",
+        "x" : 1720,
+        "y" : 783
+      }, {
+        "id" : "8",
+        "x" : 1720,
+        "y" : 183
+      }, {
+        "id" : "11",
+        "x" : 2470,
+        "y" : 1087
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "TripComponents",
+      "name" : "Component View: Galactic Delivery System - Application Layer",
+      "order" : 3,
+      "relationships" : [ {
+        "id" : "22"
+      }, {
+        "id" : "23"
+      }, {
+        "id" : "24"
+      }, {
+        "id" : "27",
+        "vertices" : [ {
+          "x" : 1720,
+          "y" : 1233
+        } ]
+      }, {
+        "id" : "28"
+      } ]
+    } ],
     "configuration" : {
       "branding" : { },
-      "lastSavedView" : "SystemContext",
+      "lastSavedView" : "StartTripFlow",
       "metadataSymbols" : "SquareBrackets",
       "styles" : {
         "elements" : [ {
           "background" : "#438dd5",
           "color" : "#ffffff",
           "tag" : "Container"
+        }, {
+          "background" : "#2d6a4f",
+          "color" : "#ffffff",
+          "tag" : "CoreDomain"
         }, {
           "background" : "#08427b",
           "color" : "#ffffff",
@@ -67,7 +424,7 @@
     },
     "containerViews" : [ {
       "automaticLayout" : {
-        "applied" : false,
+        "applied" : true,
         "edgeSeparation" : 0,
         "implementation" : "Graphviz",
         "nodeSeparation" : 300,
@@ -75,12 +432,200 @@
         "rankSeparation" : 300,
         "vertices" : false
       },
-      "description" : "Container view (to be refined as containers are introduced).",
+      "description" : "Container view.",
+      "dimensions" : {
+        "height" : 1500,
+        "width" : 3070
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 200,
+        "y" : 143
+      }, {
+        "id" : "2",
+        "x" : 200,
+        "y" : 843
+      }, {
+        "id" : "4",
+        "x" : 900,
+        "y" : 543
+      }, {
+        "id" : "5",
+        "x" : 1650,
+        "y" : 543
+      }, {
+        "id" : "9",
+        "x" : 2400,
+        "y" : 543
+      } ],
       "externalSoftwareSystemBoundariesVisible" : false,
       "key" : "Containers",
       "name" : "Container View: Galactic Delivery System",
       "order" : 2,
-      "softwareSystemId" : "2"
+      "relationships" : [ {
+        "id" : "17"
+      }, {
+        "id" : "19"
+      }, {
+        "id" : "21"
+      }, {
+        "id" : "29"
+      } ],
+      "softwareSystemId" : "3"
+    } ],
+    "customViews" : [ {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "dimensions" : {
+        "height" : 2500,
+        "width" : 3100
+      },
+      "elements" : [ {
+        "id" : "10",
+        "x" : 199,
+        "y" : 1059
+      }, {
+        "id" : "11",
+        "x" : 949,
+        "y" : 1059
+      }, {
+        "id" : "12",
+        "x" : 1699,
+        "y" : 159
+      }, {
+        "id" : "13",
+        "x" : 1699,
+        "y" : 759
+      }, {
+        "id" : "14",
+        "x" : 1699,
+        "y" : 1359
+      }, {
+        "id" : "15",
+        "x" : 2449,
+        "y" : 1359
+      }, {
+        "id" : "16",
+        "x" : 1699,
+        "y" : 1959
+      } ],
+      "key" : "DomainModel",
+      "name" : "Custom View: Core domain conceptual model.",
+      "order" : 5,
+      "relationships" : [ {
+        "id" : "31"
+      }, {
+        "id" : "32"
+      }, {
+        "id" : "33"
+      }, {
+        "id" : "34"
+      }, {
+        "id" : "35"
+      }, {
+        "id" : "36"
+      } ],
+      "title" : "Core domain conceptual model."
+    } ],
+    "dynamicViews" : [ {
+      "description" : "Dynamic view - Start Trip command.",
+      "dimensions" : {
+        "height" : 3216,
+        "width" : 2066
+      },
+      "elementId" : "5",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 833,
+        "y" : 208
+      }, {
+        "id" : "4",
+        "x" : 808,
+        "y" : 908
+      }, {
+        "id" : "6",
+        "x" : 808,
+        "y" : 1508
+      }, {
+        "id" : "7",
+        "x" : 433,
+        "y" : 2108
+      }, {
+        "id" : "8",
+        "x" : 1183,
+        "y" : 2108
+      }, {
+        "id" : "11",
+        "x" : 1145,
+        "y" : 2708
+      } ],
+      "externalBoundariesVisible" : false,
+      "key" : "StartTripFlow",
+      "name" : "Dynamic View: Galactic Delivery System - Application Layer",
+      "order" : 4,
+      "paperSize" : "A4_Portrait",
+      "relationships" : [ {
+        "description" : "POST /api/trips/{id}/start",
+        "id" : "17",
+        "order" : "1",
+        "response" : false
+      }, {
+        "description" : "StartTripCommand",
+        "id" : "22",
+        "order" : "2",
+        "response" : false
+      }, {
+        "description" : "GetAsync(TripId)",
+        "id" : "23",
+        "order" : "3",
+        "response" : false,
+        "vertices" : [ {
+          "x" : 718,
+          "y" : 1878
+        } ]
+      }, {
+        "description" : "Load Trip",
+        "id" : "24",
+        "order" : "4",
+        "response" : false,
+        "vertices" : [ {
+          "x" : 1033,
+          "y" : 2617
+        } ]
+      }, {
+        "description" : "Start()",
+        "id" : "27",
+        "order" : "5",
+        "response" : false,
+        "vertices" : [ {
+          "x" : 1783,
+          "y" : 2108
+        }, {
+          "x" : 1783,
+          "y" : 2617
+        } ]
+      }, {
+        "description" : "UpdateAsync(trip, expectedVersion)",
+        "id" : "23",
+        "order" : "6",
+        "response" : false,
+        "vertices" : [ {
+          "x" : 972,
+          "y" : 2037
+        } ]
+      }, {
+        "description" : "Publish(domainEvents)",
+        "id" : "28",
+        "order" : "7",
+        "response" : false
+      } ]
     } ],
     "systemContextViews" : [ {
       "automaticLayout" : {
@@ -94,7 +639,7 @@
       },
       "description" : "System Context view.",
       "dimensions" : {
-        "height" : 800,
+        "height" : 1500,
         "width" : 1550
       },
       "elements" : [ {
@@ -103,17 +648,23 @@
         "y" : 142
       }, {
         "id" : "2",
+        "x" : 200,
+        "y" : 842
+      }, {
+        "id" : "3",
         "x" : 900,
-        "y" : 192
+        "y" : 542
       } ],
       "enterpriseBoundaryVisible" : true,
       "key" : "SystemContext",
       "name" : "System Context View: Galactic Delivery System",
       "order" : 1,
       "relationships" : [ {
-        "id" : "3"
+        "id" : "18"
+      }, {
+        "id" : "20"
       } ],
-      "softwareSystemId" : "2"
+      "softwareSystemId" : "3"
     } ]
   }
 }

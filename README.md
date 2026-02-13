@@ -111,27 +111,19 @@ docker run --rm --name sonarqube \
 ```
 
 2. Open `http://localhost:9000` and create a user token.
+Go to `My Account > Security > Generate Token`.
 
-3. Run analysis against the local SonarQube server:
+ad export the token as an environment variable:
+```bash
+export SONAR_TOKEN=<YOUR_LOCAL_TOKEN>
+```
+
+3. Install java runtime 17
+
+```sudo apt update && sudo apt install openjdk-17-jre -y```
+
+4. Run analysis against the local SonarQube server:
 
 ```bash
-dotnet tool restore
-
-SONAR_TOKEN="<YOUR_LOCAL_TOKEN>"
-SONAR_PROJECT_KEY="SpaceTruckers"
-
-dotnet sonarscanner begin \
-  /k:"${SONAR_PROJECT_KEY}" \
-  /d:sonar.host.url="http://localhost:9000" \
-  /d:sonar.token="${SONAR_TOKEN}" \
-  /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
-
-dotnet build SpaceTruckers.sln -c Release
-
-dotnet test SpaceTruckers.sln -c Release \
-  --collect:"XPlat Code Coverage" \
-  --results-directory ./TestResults \
-  -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+./scripts/run-sonarqube-analysis.sh
 ```
