@@ -17,13 +17,13 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsProduction())
 {
-    app.MapOpenApi();
+    app.UseHttpsRedirection();
 }
 else
 {
-    app.UseHttpsRedirection();
+    app.MapOpenApi();
 }
 
 app.MapDriverEndpoints();
