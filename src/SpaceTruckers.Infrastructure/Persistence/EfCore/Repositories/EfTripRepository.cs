@@ -1,11 +1,11 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SpaceTruckers.Application.Abstractions;
 using SpaceTruckers.Application.Exceptions;
 using SpaceTruckers.Domain.Common;
 using SpaceTruckers.Domain.Ids;
 using SpaceTruckers.Domain.Trips;
-using SpaceTruckers.Infrastructure.Persistence.EfCore;
 
 namespace SpaceTruckers.Infrastructure.Persistence.EfCore.Repositories;
 
@@ -64,11 +64,11 @@ public sealed class EfTripRepository(SpaceTruckersDbContext db) : ITripRepositor
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existing = await db.Trips
+        var existingTrip = await db.Trips
             .Include("_checkpoints")
             .FirstOrDefaultAsync(x => x.Id == trip.Id, cancellationToken);
 
-        if (existing is null)
+        if (existingTrip is null)
         {
             throw new NotFoundException($"Trip '{trip.Id}' was not found.");
         }
@@ -78,14 +78,14 @@ public sealed class EfTripRepository(SpaceTruckersDbContext db) : ITripRepositor
             .CountAsync(e => e.TripId == tripId, cancellationToken);
 
         // Copy scalar state.
-        db.Entry(existing).CurrentValues.SetValues(trip);
+        db.Entry(existingTrip).CurrentValues.SetValues(trip);
 
         // Apply expected version for optimistic concurrency.
         // (Must be set after SetValues to avoid SetValues overwriting the original value.)
-        db.Entry(existing).Property(x => x.Version).OriginalValue = expectedVersion;
+        db.Entry(existingTrip).Property(x => x.Version).OriginalValue = expectedVersion;
 
         // Copy idempotency keys.
-        db.Entry(existing).Property("_startTripRequestIds").CurrentValue =
+        db.Entry(existingTrip).Property("_startTripRequestIds").CurrentValue =
             trip.StartTripRequestIds.ToHashSet(StringComparer.Ordinal);
 
         // Persist newly recorded events.
@@ -99,7 +99,7 @@ public sealed class EfTripRepository(SpaceTruckersDbContext db) : ITripRepositor
         {
             throw new OptimisticConcurrencyException($"Trip '{trip.Id}' concurrency conflict.");
         }
-        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
             // When two concurrent updates attempt to append the same next event sequence number,
             // treat the unique violation as an optimistic concurrency conflict.

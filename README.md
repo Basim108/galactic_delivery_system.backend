@@ -40,6 +40,7 @@ Controls whether the application uses:
 - In-memory repositories (disabled)
 
 When enabled:
+- The API stores domain entities such as trips, routes, drivers, etc in the postgres database.
 - The API applies EF Core migrations automatically at startup.
 - Repository implementations use PostgreSQL optimistic concurrency.
 
