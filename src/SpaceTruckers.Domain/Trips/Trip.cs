@@ -12,6 +12,7 @@ public sealed class Trip
     private readonly HashSet<string> _startTripRequestIds = new(StringComparer.Ordinal);
 
     private readonly List<TripCheckpoint> _checkpoints = new();
+    private readonly Lock _startLock = new();
 
     // For EF Core.
     private Trip() { }
@@ -86,48 +87,51 @@ public sealed class Trip
 
     public void Start(CargoCapacity vehicleCargoCapacity, DateTimeOffset now, string? requestId = null)
     {
-        if (requestId is not null && _startTripRequestIds.Contains(requestId))
+        lock (_startLock)
         {
-            return;
-        }
+            if (requestId is not null && _startTripRequestIds.Contains(requestId))
+            {
+                return;
+            }
 
-        if (Status == TripStatus.Active)
-        {
-            throw new DomainRuleViolationException(DomainErrorCodes.TRIP_ALREADY_STARTED, "Trip is already active.");
-        }
+            if (Status == TripStatus.Active)
+            {
+                throw new DomainRuleViolationException(DomainErrorCodes.TRIP_ALREADY_STARTED, "Trip is already active.");
+            }
 
-        if (Status == TripStatus.Completed)
-        {
-            throw new DomainRuleViolationException(DomainErrorCodes.TRIP_ALREADY_COMPLETED, "Trip is already completed.");
-        }
+            if (Status == TripStatus.Completed)
+            {
+                throw new DomainRuleViolationException(DomainErrorCodes.TRIP_ALREADY_COMPLETED, "Trip is already completed.");
+            }
 
-        if (Status == TripStatus.Aborted)
-        {
-            throw new DomainRuleViolationException(DomainErrorCodes.TRIP_ALREADY_ABORTED, "Trip is already aborted.");
-        }
+            if (Status == TripStatus.Aborted)
+            {
+                throw new DomainRuleViolationException(DomainErrorCodes.TRIP_ALREADY_ABORTED, "Trip is already aborted.");
+            }
 
-        if (vehicleCargoCapacity.Value < CargoRequirement.Value)
-        {
-            throw new DomainRuleViolationException(
-                DomainErrorCodes.INSUFFICIENT_CARGO_CAPACITY,
-                $"Vehicle capacity {vehicleCargoCapacity.Value} is insufficient for cargo requirement {CargoRequirement.Value}.");
-        }
+            if (vehicleCargoCapacity.Value < CargoRequirement.Value)
+            {
+                throw new DomainRuleViolationException(
+                    DomainErrorCodes.INSUFFICIENT_CARGO_CAPACITY,
+                    $"Vehicle capacity {vehicleCargoCapacity.Value} is insufficient for cargo requirement {CargoRequirement.Value}.");
+            }
 
-        Status = TripStatus.Active;
-        IncrementVersion();
-        Record(new TripStarted(Id, now));
+            Status = TripStatus.Active;
+            IncrementVersion();
+            Record(new TripStarted(Id, now));
 
-        // Starting a trip implies the vehicle is at the route origin (first checkpoint).
-        if (LastReachedCheckpointIndex < 0)
-        {
-            LastReachedCheckpointIndex = 0;
-            var origin = _checkpoints[0];
-            Record(new CheckpointReached(Id, origin.Id, origin.Name, origin.Sequence, now));
-        }
+            // Starting a trip implies the vehicle is at the route origin (first checkpoint).
+            if (LastReachedCheckpointIndex < 0)
+            {
+                LastReachedCheckpointIndex = 0;
+                var origin = _checkpoints[0];
+                Record(new CheckpointReached(Id, origin.Id, origin.Name, origin.Sequence, now));
+            }
 
-        if (requestId is not null)
-        {
-            _startTripRequestIds.Add(requestId);
+            if (requestId is not null)
+            {
+                _startTripRequestIds.Add(requestId);
+            }
         }
     }
 
