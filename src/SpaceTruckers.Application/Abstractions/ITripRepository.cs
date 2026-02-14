@@ -9,5 +9,5 @@ public interface ITripRepository
 
     Task AddAsync(Trip trip, CancellationToken cancellationToken);
 
-    Task UpdateAsync(Trip trip, int expectedVersion, CancellationToken cancellationToken);
+    Task UpdateAsync(Trip trip, uint expectedVersion, CancellationToken cancellationToken);
 }

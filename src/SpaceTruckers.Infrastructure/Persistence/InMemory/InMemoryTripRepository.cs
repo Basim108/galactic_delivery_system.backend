@@ -31,7 +31,7 @@ public sealed class InMemoryTripRepository : ITripRepository
         return Task.CompletedTask;
     }
 
-    public Task UpdateAsync(Trip trip, int expectedVersion, CancellationToken cancellationToken)
+    public Task UpdateAsync(Trip trip, uint expectedVersion, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

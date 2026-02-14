@@ -11,7 +11,10 @@ public sealed class Trip
     private readonly List<IDomainEvent> _uncommittedEvents = new();
     private readonly HashSet<string> _startTripRequestIds = new(StringComparer.Ordinal);
 
-    private readonly IReadOnlyList<TripCheckpoint> _checkpoints;
+    private readonly List<TripCheckpoint> _checkpoints = new();
+
+    // For EF Core.
+    private Trip() { }
 
     private Trip(
         TripId id,
@@ -31,17 +34,18 @@ public sealed class Trip
         VehicleId = vehicleId;
         RouteId = routeId;
         CargoRequirement = cargoRequirement;
-        _checkpoints = checkpoints.ToArray();
+
+        _checkpoints.AddRange(checkpoints);
 
         Status = TripStatus.Planned;
         Version = 0;
         LastReachedCheckpointIndex = -1;
     }
 
-    public TripId Id { get; }
-    public DriverId DriverId { get; }
-    public VehicleId VehicleId { get; }
-    public RouteId RouteId { get; }
+    public TripId Id { get; private set; }
+    public DriverId DriverId { get; private set; }
+    public VehicleId VehicleId { get; private set; }
+    public RouteId RouteId { get; private set; }
 
     public CargoRequirement CargoRequirement { get; private set; }
 
@@ -51,7 +55,7 @@ public sealed class Trip
     /// Optimistic concurrency token.
     /// Incremented on each accepted state transition.
     /// </summary>
-    public int Version { get; private set; }
+    public uint Version { get; private set; }
 
     public int LastReachedCheckpointIndex { get; private set; }
 
@@ -61,6 +65,8 @@ public sealed class Trip
             : null;
 
     public IReadOnlyList<TripCheckpoint> Checkpoints => _checkpoints;
+
+    public IReadOnlyCollection<string> StartTripRequestIds => _startTripRequestIds;
 
     public IReadOnlyList<IDomainEvent> RecordedEvents => _recordedEvents;
 
@@ -228,6 +234,12 @@ public sealed class Trip
         // Do not persist uncommitted events; they are transient.
 
         return clone;
+    }
+
+    internal void RestoreRecordedEvents(IReadOnlyCollection<IDomainEvent> recordedEvents)
+    {
+        _recordedEvents.Clear();
+        _recordedEvents.AddRange(recordedEvents);
     }
 
     private void EnsureActive()

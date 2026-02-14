@@ -2,8 +2,30 @@ using SpaceTruckers.Domain.Ids;
 
 namespace SpaceTruckers.Domain.Routes;
 
-public sealed record Route(RouteId Id, string Name, IReadOnlyList<RouteCheckpoint> Checkpoints)
+public sealed class Route
 {
+    private readonly List<RouteCheckpoint> _checkpoints = new();
+
+    // For EF Core.
+    private Route() { }
+
+    private Route(RouteId id, string name, IReadOnlyList<RouteCheckpoint> checkpoints)
+    {
+        if (checkpoints.Count == 0)
+        {
+            throw new ArgumentException("Route must have at least one checkpoint.", nameof(checkpoints));
+        }
+
+        Id = id;
+        Name = name;
+        _checkpoints.AddRange(checkpoints);
+    }
+
+    public RouteId Id { get; private set; }
+    public string Name { get; private set; } = string.Empty;
+
+    public IReadOnlyList<RouteCheckpoint> Checkpoints => _checkpoints;
+
     public static Route Create(RouteId id, string name, IReadOnlyList<string> checkpointNames)
     {
         if (checkpointNames.Count == 0)
