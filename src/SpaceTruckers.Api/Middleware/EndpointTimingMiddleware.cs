@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Microsoft.AspNetCore.Routing;
 using SpaceTruckers.Api.Common;
 
 namespace SpaceTruckers.Api.Middleware;

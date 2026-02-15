@@ -18,40 +18,25 @@ builder.Logging.AddConsole();
 
 // OpenTelemetry (metrics + tracing).
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService(serviceName: builder.Environment.ApplicationName))
-    .WithMetrics(metrics => metrics
-        .AddMeter(ApiMetrics.METER_NAME)
-        .AddMeter(SpaceTruckersMetrics.METER_NAME)
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddRuntimeInstrumentation()
-        // Explicit buckets enable percentile queries (p50/p95/p99) in the metrics backend.
-        .AddView(
-            instrumentName: "http_endpoint_duration_ms",
-            new ExplicitBucketHistogramConfiguration
-            {
-                Boundaries =
-                [
-                    1,
-                    2.5,
-                    5,
-                    10,
-                    25,
-                    50,
-                    100,
-                    250,
-                    500,
-                    1000,
-                    2500,
-                    5000,
-                    10000,
-                ],
-            })
-        .AddOtlpExporter())
-    .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddOtlpExporter());
+       .ConfigureResource(r => r.AddService(serviceName: builder.Environment.ApplicationName))
+       .WithMetrics(metrics => metrics
+                               .AddMeter(ApiMetrics.METER_NAME)
+                               .AddMeter(SpaceTruckersMetrics.METER_NAME)
+                               .AddAspNetCoreInstrumentation()
+                               .AddHttpClientInstrumentation()
+                               .AddRuntimeInstrumentation()
+                               // Explicit buckets enable percentile queries (p50/p95/p99) in the metrics backend.
+                               .AddView(
+                                        instrumentName: "http_endpoint_duration_ms",
+                                        new ExplicitBucketHistogramConfiguration
+                                        {
+                                            Boundaries = [1, 2.5, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000,],
+                                        })
+                               .AddOtlpExporter())
+       .WithTracing(tracing => tracing
+                               .AddAspNetCoreInstrumentation()
+                               .AddHttpClientInstrumentation()
+                               .AddOtlpExporter());
 
 // Feature flags:
 // - Development: from appsettings.Development.json
