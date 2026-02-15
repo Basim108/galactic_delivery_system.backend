@@ -8,5 +8,5 @@ public sealed record TripDto(
     Guid VehicleId,
     Guid RouteId,
     TripStatus Status,
-    int Version,
+    uint Version,
     string? LastReachedCheckpoint);

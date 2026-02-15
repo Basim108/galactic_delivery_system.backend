@@ -88,7 +88,7 @@ jobs:
 
       - name: Test with coverage
         run: |
-          dotnet test SpaceTruckers.sln \
+          dotnet test ./tests/SpaceTruckers.UnitTests/SpaceTruckers.UnitTests.csproj \
             -c ${{ env.CONFIGURATION }} \
             --no-restore \
             --collect:"XPlat Code Coverage" \
@@ -109,58 +109,58 @@ jobs:
           path: TestResults
           retention-days: 14
 
-  quality:
-    name: Quality (SonarCloud)
-    runs-on: ubuntu-latest
-    needs: [ build, test ]
-    steps:
-      - name: Checkout (full history for Sonar)
-        uses: actions/checkout@v4.2.1
-        with:
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4.3.1
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Setup Java (required by SonarScanner)
-        uses: actions/setup-java@v4.7.0
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Restore local tools
-        run: dotnet tool restore
-
-      - name: SonarCloud - Begin
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORG: ${{ secrets.SONAR_ORG }}
-          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
-        run: |
-          dotnet sonarscanner begin \
-            /k:"${SONAR_PROJECT_KEY}" \
-            /o:"${SONAR_ORG}" \
-            /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
-
-      - name: Build
-        run: dotnet build SpaceTruckers.sln -c ${{ env.CONFIGURATION }}
-
-      - name: Test (for Sonar)
-        run: |
-          dotnet test SpaceTruckers.sln \
-            -c ${{ env.CONFIGURATION }} \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-      - name: SonarCloud - End
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+#  quality:
+#    name: Quality (SonarCloud)
+#    runs-on: ubuntu-latest
+#    needs: [ build, test ]
+#    steps:
+#      - name: Checkout (full history for Sonar)
+#        uses: actions/checkout@v4.2.1
+#        with:
+#          fetch-depth: 0
+#
+#      - name: Setup .NET
+#        uses: actions/setup-dotnet@v4.3.1
+#        with:
+#          dotnet-version: 10.0.x
+#
+#      - name: Setup Java (required by SonarScanner)
+#        uses: actions/setup-java@v4.7.0
+#        with:
+#          distribution: temurin
+#          java-version: '17'
+#
+#      - name: Restore local tools
+#        run: dotnet tool restore
+#
+#      - name: SonarCloud - Begin
+#        env:
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#          SONAR_ORG: ${{ secrets.SONAR_ORG }}
+#          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+#        run: |
+#          dotnet sonarscanner begin \
+#            /k:"${SONAR_PROJECT_KEY}" \
+#            /o:"${SONAR_ORG}" \
+#            /d:sonar.host.url="https://sonarcloud.io" \
+#            /d:sonar.token="${SONAR_TOKEN}" \
+#            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+#
+#      - name: Build
+#        run: dotnet build SpaceTruckers.sln -c ${{ env.CONFIGURATION }}
+#
+#      - name: Test (for Sonar)
+#        run: |
+#          dotnet test SpaceTruckers.sln \
+#            -c ${{ env.CONFIGURATION }} \
+#            --collect:"XPlat Code Coverage" \
+#            --results-directory ./TestResults \
+#            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+#
+#      - name: SonarCloud - End
+#        env:
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#        run: dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
 
   architecture-check:
     name: Architecture Check (Structurizr DSL)

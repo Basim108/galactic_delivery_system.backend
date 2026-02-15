@@ -6,14 +6,9 @@ using SpaceTruckers.Domain.Resources;
 
 namespace SpaceTruckers.IntegrationTests.Api;
 
-public sealed class DriverApiValidationTests : IClassFixture<SpaceTruckersApiFactory>
+public sealed class DriverApiValidationTests(SpaceTruckersApiFactory factory) : IClassFixture<SpaceTruckersApiFactory>
 {
-    private readonly HttpClient _http;
-
-    public DriverApiValidationTests(SpaceTruckersApiFactory factory)
-    {
-        _http = factory.CreateClient();
-    }
+    private readonly HttpClient _http = factory.CreateClient();
 
     [Fact]
     public async Task CreateDriver_WithValidName_ShouldSucceed()

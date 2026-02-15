@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 .structurizr
 .sonarqube
+
+bin/
+obj/

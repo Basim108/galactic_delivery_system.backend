@@ -21,18 +21,92 @@ Developer guide for the **SpaceTruckers** backend (The Great Galactic Delivery R
 
 ## Getting started
 
-Restore tools and packages:
+### Restore tools and packages:
 
 ```bash
 dotnet tool restore
 dotnet restore SpaceTruckers.sln
 ```
 
-Build:
+### Build:
 
 ```bash
 dotnet build SpaceTruckers.sln -c Release
 ```
+
+## Features
+### UseDomainPersistentStorage
+Controls whether the application uses:
+- EF Core repositories backed by PostgreSQL (enabled)
+- In-memory repositories (disabled)
+
+When enabled:
+- The API stores domain entities such as trips, routes, drivers, etc in the postgres database.
+- The API applies EF Core migrations automatically at startup.
+- Repository implementations use PostgreSQL optimistic concurrency.
+
+When disabled:
+- The API runs without any database dependency.
+- All data is process-local and is lost on restart.
+
+## Feature flags
+### Development
+Toggle `UseDomainPersistentStorage` in `src/SpaceTruckers.Api/appsettings.Development.json`:
+
+```json
+{
+  "FeatureManagement": {
+    "UseDomainPersistentStorage": true
+  }
+}
+```
+
+### Staging / Production (Azure App Configuration)
+The API is configured to load feature flags from Azure App Configuration when `ASPNETCORE_ENVIRONMENT` is not `Development`.
+
+Required configuration:
+- Set `AzureAppConfiguration:ConnectionString` via environment variables or your platform configuration (do not commit it to the repo).
+- Create a feature flag named `UseDomainPersistentStorage` in Azure App Configuration.
+
+## EF Core migrations (dotnet-ef)
+This repo uses `dotnet-ef` as a local tool.
+
+Install/restore the tool:
+
+```bash
+dotnet tool restore
+```
+
+Set a connection string (recommended: environment variable or user-secrets in Development):
+
+```bash
+export ConnectionStrings__SpaceTruckersDb='Host=localhost;Port=5432;Database=spacetruckers;Username=spacetruckers;Password=spacetruckers'
+```
+
+Add a migration:
+
+```bash
+dotnet tool run dotnet-ef migrations add <MigrationName> \
+  --project src/SpaceTruckers.Infrastructure \
+  --output-dir Persistence/EfCore/Migrations
+```
+
+Apply migrations:
+
+```bash
+dotnet tool run dotnet-ef database update \
+  --project src/SpaceTruckers.Infrastructure
+```
+
+## Docker (API + PostgreSQL 18)
+A local compose setup is provided:
+
+```bash
+docker compose up --build
+```
+
+- API: `http://localhost:8080`
+- PostgreSQL: `localhost:5432` (service name is `db` inside the compose network)
 
 ## Formatting / linting
 

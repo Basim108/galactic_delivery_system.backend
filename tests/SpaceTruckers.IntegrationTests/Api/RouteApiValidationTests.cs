@@ -5,14 +5,9 @@ using SpaceTruckers.Api.Contracts;
 
 namespace SpaceTruckers.IntegrationTests.Api;
 
-public sealed class RouteApiValidationTests : IClassFixture<SpaceTruckersApiFactory>
+public sealed class RouteApiValidationTests(SpaceTruckersApiFactory factory) : IClassFixture<SpaceTruckersApiFactory>
 {
-    private readonly HttpClient _http;
-
-    public RouteApiValidationTests(SpaceTruckersApiFactory factory)
-    {
-        _http = factory.CreateClient();
-    }
+    private readonly HttpClient _http = factory.CreateClient();
 
     [Fact]
     public async Task CreateRoute_WithValidData_ShouldSucceed()

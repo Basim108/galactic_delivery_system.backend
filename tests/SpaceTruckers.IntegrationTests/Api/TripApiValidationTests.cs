@@ -22,10 +22,10 @@ public sealed class TripApiValidationTests : IClassFixture<SpaceTruckersApiFacto
     public async Task CreateTrip_WithValidData_ShouldSucceed()
     {
         // Arrange
-        var driverId  = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
+        var driverId = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
         var vehicleId = await _client.CreateVehicleAsync("Vehicle", "Type", 1000, ResourceStatus.Available);
-        var routeId   = await _client.CreateRouteAsync("Route", "Checkpoint A", "Checkpoint B");
-        var request   = new CreateTripRequest(driverId, vehicleId, routeId, 500, null);
+        var routeId = await _client.CreateRouteAsync("Route", "Checkpoint A", "Checkpoint B");
+        var request = new CreateTripRequest(driverId, vehicleId, routeId, 500, null);
 
         // Act
         var response = await _http.PostAsJsonAsync("/api/trips", request);
@@ -39,8 +39,8 @@ public sealed class TripApiValidationTests : IClassFixture<SpaceTruckersApiFacto
     {
         // Arrange
         var vehicleId = await _client.CreateVehicleAsync("Vehicle", "Type", 1000, ResourceStatus.Available);
-        var routeId   = await _client.CreateRouteAsync("Route", "Checkpoint A");
-        var request   = new CreateTripRequest(Guid.Empty, vehicleId, routeId, 500, null);
+        var routeId = await _client.CreateRouteAsync("Route", "Checkpoint A");
+        var request = new CreateTripRequest(Guid.Empty, vehicleId, routeId, 500, null);
 
         // Act
         var response = await _http.PostAsJsonAsync("/api/trips", request);
@@ -54,8 +54,8 @@ public sealed class TripApiValidationTests : IClassFixture<SpaceTruckersApiFacto
     {
         // Arrange
         var driverId = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
-        var routeId  = await _client.CreateRouteAsync("Route", "Checkpoint A");
-        var request  = new CreateTripRequest(driverId, Guid.Empty, routeId, 500, null);
+        var routeId = await _client.CreateRouteAsync("Route", "Checkpoint A");
+        var request = new CreateTripRequest(driverId, Guid.Empty, routeId, 500, null);
 
         // Act
         var response = await _http.PostAsJsonAsync("/api/trips", request);
@@ -68,9 +68,9 @@ public sealed class TripApiValidationTests : IClassFixture<SpaceTruckersApiFacto
     public async Task CreateTrip_WithEmptyRouteId_ShouldReturnBadRequest()
     {
         // Arrange
-        var driverId  = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
+        var driverId = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
         var vehicleId = await _client.CreateVehicleAsync("Vehicle", "Type", 1000, ResourceStatus.Available);
-        var request   = new CreateTripRequest(driverId, vehicleId, Guid.Empty, 500, null);
+        var request = new CreateTripRequest(driverId, vehicleId, Guid.Empty, 500, null);
 
         // Act
         var response = await _http.PostAsJsonAsync("/api/trips", request);
@@ -83,10 +83,10 @@ public sealed class TripApiValidationTests : IClassFixture<SpaceTruckersApiFacto
     public async Task CreateTrip_WithNegativeCargoRequirement_ShouldReturnBadRequest()
     {
         // Arrange
-        var driverId  = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
+        var driverId = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
         var vehicleId = await _client.CreateVehicleAsync("Vehicle", "Type", 1000, ResourceStatus.Available);
-        var routeId   = await _client.CreateRouteAsync("Route", "Checkpoint A");
-        var request   = new CreateTripRequest(driverId, vehicleId, routeId, -1, null);
+        var routeId = await _client.CreateRouteAsync("Route", "Checkpoint A");
+        var request = new CreateTripRequest(driverId, vehicleId, routeId, -1, null);
 
         // Act
         var response = await _http.PostAsJsonAsync("/api/trips", request);
@@ -99,10 +99,10 @@ public sealed class TripApiValidationTests : IClassFixture<SpaceTruckersApiFacto
     public async Task CreateTrip_WithZeroCargoRequirement_ShouldSucceed()
     {
         // Arrange
-        var driverId  = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
+        var driverId = await _client.CreateDriverAsync("Driver", ResourceStatus.Available);
         var vehicleId = await _client.CreateVehicleAsync("Vehicle", "Type", 1000, ResourceStatus.Available);
-        var routeId   = await _client.CreateRouteAsync("Route", "Checkpoint A");
-        var request   = new CreateTripRequest(driverId, vehicleId, routeId, 0, null);
+        var routeId = await _client.CreateRouteAsync("Route", "Checkpoint A");
+        var request = new CreateTripRequest(driverId, vehicleId, routeId, 0, null);
 
         // Act
         var response = await _http.PostAsJsonAsync("/api/trips", request);
