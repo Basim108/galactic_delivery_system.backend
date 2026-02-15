@@ -27,7 +27,7 @@ public sealed class FeatureFlaggedResourceBookingService(
 
     private async Task<IResourceBookingService> GetInnerAsync(CancellationToken cancellationToken)
     {
-        return await featureManager.IsEnabledAsync(FeatureFlags.UseDomainPersistentStorage)
+        return await featureManager.IsEnabledAsync(FeatureFlags.USE_DOMAIN_PERSISTENT_STORAGE)
             ? serviceProvider.GetRequiredService<EfResourceBookingService>()
             : inMemory;
     }

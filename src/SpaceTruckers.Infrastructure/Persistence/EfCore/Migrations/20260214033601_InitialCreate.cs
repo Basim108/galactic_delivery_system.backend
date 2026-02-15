@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -136,13 +136,13 @@ namespace SpaceTruckers.Infrastructure.Persistence.EfCore.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_route_checkpoints_RouteId_Sequence",
                 table: "route_checkpoints",
-                columns: new[] { "RouteId", "Sequence" },
+                columns: ["RouteId", "Sequence"],
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_trip_checkpoints_TripId_Sequence",
                 table: "trip_checkpoints",
-                columns: new[] { "TripId", "Sequence" },
+                columns: ["TripId", "Sequence"],
                 unique: true);
 
             migrationBuilder.CreateIndex(

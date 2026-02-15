@@ -6,14 +6,9 @@ using SpaceTruckers.Domain.Resources;
 
 namespace SpaceTruckers.IntegrationTests.Api;
 
-public sealed class VehicleApiValidationTests : IClassFixture<SpaceTruckersApiFactory>
+public sealed class VehicleApiValidationTests(SpaceTruckersApiFactory factory) : IClassFixture<SpaceTruckersApiFactory>
 {
-    private readonly HttpClient _http;
-
-    public VehicleApiValidationTests(SpaceTruckersApiFactory factory)
-    {
-        _http = factory.CreateClient();
-    }
+    private readonly HttpClient _http = factory.CreateClient();
 
     [Fact]
     public async Task CreateVehicle_WithValidData_ShouldSucceed()

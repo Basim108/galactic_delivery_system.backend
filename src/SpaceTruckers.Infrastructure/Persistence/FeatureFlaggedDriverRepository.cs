@@ -28,7 +28,7 @@ public sealed class FeatureFlaggedDriverRepository(
 
     private async Task<IDriverRepository> GetInnerAsync(CancellationToken cancellationToken)
     {
-        return await featureManager.IsEnabledAsync(FeatureFlags.UseDomainPersistentStorage)
+        return await featureManager.IsEnabledAsync(FeatureFlags.USE_DOMAIN_PERSISTENT_STORAGE)
                    ? serviceProvider.GetRequiredService<EfDriverRepository>()
                    : inMemory;
     }

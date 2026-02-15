@@ -20,14 +20,15 @@ Developer guide for the **SpaceTruckers** backend (The Great Galactic Delivery R
 - Docker (for Structurizr Lite and local SonarQube)
 
 ## Getting started
-Restore tools and packages:
+
+### Restore tools and packages:
 
 ```bash
 dotnet tool restore
 dotnet restore SpaceTruckers.sln
 ```
 
-Build:
+### Build:
 
 ```bash
 dotnet build SpaceTruckers.sln -c Release

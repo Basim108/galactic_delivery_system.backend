@@ -28,7 +28,7 @@ public sealed class FeatureFlaggedVehicleRepository(
 
     private async Task<IVehicleRepository> GetInnerAsync(CancellationToken cancellationToken)
     {
-        return await featureManager.IsEnabledAsync(FeatureFlags.UseDomainPersistentStorage)
+        return await featureManager.IsEnabledAsync(FeatureFlags.USE_DOMAIN_PERSISTENT_STORAGE)
                    ? serviceProvider.GetRequiredService<EfVehicleRepository>()
                    : inMemory;
     }

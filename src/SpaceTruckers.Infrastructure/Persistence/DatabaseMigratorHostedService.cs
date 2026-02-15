@@ -19,7 +19,7 @@ public sealed class DatabaseMigratorHostedService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!await featureManager.IsEnabledAsync(FeatureFlags.UseDomainPersistentStorage))
+        if (!await featureManager.IsEnabledAsync(FeatureFlags.USE_DOMAIN_PERSISTENT_STORAGE))
         {
             logger.LogInformation("UseDomainPersistentStorage is disabled; skipping database migration.");
             return;
