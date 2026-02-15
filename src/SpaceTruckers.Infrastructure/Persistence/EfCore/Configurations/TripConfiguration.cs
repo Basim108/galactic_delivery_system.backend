@@ -36,8 +36,15 @@ public sealed partial class SpaceTruckersDbContext
                    .HasMaxLength(50);
 
             // Optimistic concurrency token.
+            //
+            // NOTE: We intentionally keep an explicit "Version" column (bigint) instead of using PostgreSQL's
+            // system column xmin, because this model increments Version in the domain and expects it to be a
+            // regular mapped property.
             builder.Property(x => x.Version)
-                   .IsRowVersion();
+                   .HasConversion(v => (long)v, v => checked((uint)v))
+                   .HasColumnType("bigint")
+                   .HasDefaultValue(0L)
+                   .IsConcurrencyToken();
 
             builder.Property(x => x.LastReachedCheckpointIndex);
 
