@@ -48,12 +48,12 @@ public static class TripEndpoints
         CancellationToken cancellationToken)
     {
         var tripGuid = request.TripId ?? Guid.CreateVersion7();
-        var tripId   = new TripId(tripGuid);
+        var tripId = new TripId(tripGuid);
 
-        using var tripIdScope    = logger.BeginScope("TripId={TripId}", request.DriverId);
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", request.DriverId);
         using var vehicleIdScope = logger.BeginScope("VehicleId={VehicleId}", request.VehicleId);
-        using var routeIdScope   = logger.BeginScope("RouteId={DriverId}", request.RouteId);
-        using var driverIdScope  = logger.BeginScope("DriverId={DriverId}", request.DriverId);
+        using var routeIdScope = logger.BeginScope("RouteId={DriverId}", request.RouteId);
+        using var driverIdScope = logger.BeginScope("DriverId={DriverId}", request.DriverId);
 
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
@@ -126,7 +126,7 @@ public static class TripEndpoints
         ILogger<TripEndpoint> logger,
         CancellationToken cancellationToken)
     {
-        using var tripIdScope         = logger.BeginScope("TripId={TripId}", tripId);
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
         using var checkpointNameScope = logger.BeginScope("CheckpointName={CheckpointName}", request.CheckpointName);
 
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
@@ -149,7 +149,7 @@ public static class TripEndpoints
     {
         using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
 
-        var       validation          = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
+        var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
         {
             return validation;
