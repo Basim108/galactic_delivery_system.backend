@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SpaceTruckers.Infrastructure.Persistence.EfCore;
@@ -11,9 +12,11 @@ using SpaceTruckers.Infrastructure.Persistence.EfCore;
 namespace SpaceTruckers.Infrastructure.Persistence.EfCore.Migrations
 {
     [DbContext(typeof(SpaceTruckersDbContext))]
-    partial class SpaceTruckersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260215220133_AlignTripVersionColumn")]
+    partial class AlignTripVersionColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -9,6 +9,7 @@ namespace SpaceTruckers.Api.Endpoints;
 
 public static class DriverEndpoints
 {
+    private sealed class DriverEndpoint;
     public static IEndpointRouteBuilder MapDriverEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/drivers")
@@ -24,15 +25,19 @@ public static class DriverEndpoints
         CreateDriverRequest request,
         IValidator<CreateDriverRequest> validator,
         IMediator mediator,
+        ILogger<DriverEndpoint> logger,
         CancellationToken cancellationToken)
     {
+        var driverId = DriverId.New();
+
+        using var driverIdScope = logger.BeginScope("DriverId={DriverId}", driverId.Value);
+
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
         {
             return validation;
         }
 
-        var driverId = DriverId.New();
         await mediator.Send(new CreateDriverCommand(driverId, request.Name, request.Status), cancellationToken);
 
         return Results.Created($"/api/drivers/{driverId}", new CreateDriverResponse(driverId.Value));

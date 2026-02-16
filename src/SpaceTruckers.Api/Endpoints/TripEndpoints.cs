@@ -10,6 +10,7 @@ namespace SpaceTruckers.Api.Endpoints;
 
 public static class TripEndpoints
 {
+    private sealed class TripEndpoint;
     public static IEndpointRouteBuilder MapTripEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/trips")
@@ -43,16 +44,22 @@ public static class TripEndpoints
         CreateTripRequest request,
         IValidator<CreateTripRequest> validator,
         IMediator mediator,
+        ILogger<TripEndpoint> logger,
         CancellationToken cancellationToken)
     {
+        var tripGuid = request.TripId ?? Guid.CreateVersion7();
+        var tripId = new TripId(tripGuid);
+
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", request.DriverId);
+        using var vehicleIdScope = logger.BeginScope("VehicleId={VehicleId}", request.VehicleId);
+        using var routeIdScope = logger.BeginScope("RouteId={DriverId}", request.RouteId);
+        using var driverIdScope = logger.BeginScope("DriverId={DriverId}", request.DriverId);
+
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
         {
             return validation;
         }
-
-        var tripGuid = request.TripId ?? Guid.CreateVersion7();
-        var tripId = new TripId(tripGuid);
 
         var dto = await mediator.Send(
             new CreateTripCommand(
@@ -66,14 +73,26 @@ public static class TripEndpoints
         return Results.Created($"/api/trips/{dto.TripId}", dto);
     }
 
-    private static async Task<IResult> GetTripAsync(Guid tripId, IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<IResult> GetTripAsync(
+        Guid tripId,
+        IMediator mediator,
+        ILogger<TripEndpoint> logger,
+        CancellationToken cancellationToken)
     {
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
+
         var dto = await mediator.Send(new GetTripQuery(new TripId(tripId)), cancellationToken);
         return Results.Ok(dto);
     }
 
-    private static async Task<IResult> GetTripSummaryAsync(Guid tripId, IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<IResult> GetTripSummaryAsync(
+        Guid tripId,
+        IMediator mediator,
+        ILogger<TripEndpoint> logger,
+        CancellationToken cancellationToken)
     {
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
+
         var dto = await mediator.Send(new GetTripSummaryQuery(new TripId(tripId)), cancellationToken);
         return Results.Ok(dto);
     }
@@ -83,8 +102,12 @@ public static class TripEndpoints
         StartTripRequest request,
         IValidator<StartTripRequest> validator,
         IMediator mediator,
+        ILogger<TripEndpoint> logger,
         CancellationToken cancellationToken)
     {
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
+        using var requestIdScope = logger.BeginScope("RequestId={RequestId}", request.RequestId);
+
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
         {
@@ -100,8 +123,12 @@ public static class TripEndpoints
         ReachCheckpointRequest request,
         IValidator<ReachCheckpointRequest> validator,
         IMediator mediator,
+        ILogger<TripEndpoint> logger,
         CancellationToken cancellationToken)
     {
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
+        using var checkpointNameScope = logger.BeginScope("CheckpointName={CheckpointName}", request.CheckpointName);
+
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
         {
@@ -117,8 +144,11 @@ public static class TripEndpoints
         ReportIncidentRequest request,
         IValidator<ReportIncidentRequest> validator,
         IMediator mediator,
+        ILogger<TripEndpoint> logger,
         CancellationToken cancellationToken)
     {
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
+
         var validation = await ValidationExtensions.ValidateAsync(request, validator, cancellationToken);
         if (validation is not null)
         {
@@ -132,8 +162,14 @@ public static class TripEndpoints
         return Results.Ok(dto);
     }
 
-    private static async Task<IResult> CompleteTripAsync(Guid tripId, IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<IResult> CompleteTripAsync(
+        Guid tripId,
+        IMediator mediator,
+        ILogger<TripEndpoint> logger,
+        CancellationToken cancellationToken)
     {
+        using var tripIdScope = logger.BeginScope("TripId={TripId}", tripId);
+
         var dto = await mediator.Send(new CompleteTripCommand(new TripId(tripId)), cancellationToken);
         return Results.Ok(dto);
     }
