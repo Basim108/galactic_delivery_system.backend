@@ -16,7 +16,7 @@ RUN dotnet restore src/SpaceTruckers.Api/SpaceTruckers.Api.csproj
 # Copy the rest of the source
 COPY src/ src/
 
-RUN dotnet publish src/SpaceTruckers.Api/SpaceTruckers.Api.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/SpaceTruckers.Api/SpaceTruckers.Api.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
